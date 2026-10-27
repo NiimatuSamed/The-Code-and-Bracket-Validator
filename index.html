@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stack-Powered Code Bracket Validator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap');
+        body { font-family: 'Plus Jakarta Sans', sans-serif; }
+        .glass { background: rgba(17, 24, 39, 0.75); backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.1); }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col items-center justify-between p-4 md:p-8">
+
+    <!-- Header -->
+    <header class="w-full max-w-4xl flex items-center justify-between mb-6 border-b border-slate-800 pb-4">
+        <div>
+            <h1 class="text-2xl font-bold bg-gradient-to-r from-amber-400 to-orange-400 bg-clip-text text-transparent">
+                <i class="fa-solid fa-code-compare mr-2"></i> StackCheck Syntax Evaluator
+            </h1>
+            <p class="text-xs text-slate-400">Data Structures Assignment: LIFO Stack Expression Parsing</p>
+        </div>
+        <button onclick="toggleModal()" class="px-4 py-2 bg-amber-600 hover:bg-amber-500 text-xs font-semibold rounded-lg transition flex items-center gap-2 shadow-lg shadow-amber-900/40">
+            <i class="fa-solid fa-code"></i> View Stack Code
+        </button>
+    </header>
+
+    <!-- Main Container -->
+    <main class="w-full max-w-4xl grid grid-cols-1 md:grid-cols-3 gap-6 flex-grow">
+        
+        <!-- Left 2 Cols: Input & Analysis -->
+        <section class="md:col-span-2 flex flex-col gap-6">
+            
+            <div class="glass rounded-2xl p-6 shadow-xl flex flex-col justify-between flex-grow">
+                <div>
+                    <label for="code-input" class="text-xs text-slate-400 font-medium mb-2 block">
+                        Enter code snippet or mathematical expression to evaluate bracket balance:
+                    </label>
+                    <textarea id="code-input" oninput="validateExpression()" rows="5" class="w-full bg-slate-900/90 border border-slate-700 rounded-xl p-4 text-sm text-amber-300 font-mono focus:outline-none focus:border-amber-500 transition leading-relaxed" placeholder="Type or paste code here, e.g. function test() { return [1, (2 + 3)]; }"></textarea>
+
+                    <!-- Status Display -->
+                    <div id="status-card" class="mt-4 p-4 rounded-xl border flex items-center justify-between transition-all duration-300 bg-slate-900/50 border-slate-800">
+                        <div class="flex items-center gap-3">
+                            <div id="status-icon" class="w-10 h-10 rounded-lg bg-slate-800 flex items-center justify-center text-slate-400">
+                                <i class="fa-solid fa-terminal"></i>
+                            </div>
+                            <div>
+                                <h4 id="status-title" class="text-sm font-bold text-white">Awaiting Input</h4>
+                                <p id="status-desc" class="text-xs text-slate-400">Type parentheses (), brackets [], or braces {} above.</p>
+                            </div>
+                        </div>
+                        <span id="status-badge" class="text-[10px] uppercase font-bold tracking-wider px-2.5 py-1 rounded-full bg-slate-800 text-slate-400">Idle</span>
+                    </div>
+                </div>
+
+                <!-- Sample Buttons -->
+                <div class="mt-6">
+                    <p class="text-[11px] text-slate-400 font-semibold uppercase tracking-wider mb-2">Test Examples:</p>
+                    <div class="flex flex-wrap gap-2">
+                        <button onclick="setSample('({[a + b] * (c - d)})')" class="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 border border-slate-800 text-xs font-mono text-emerald-400 rounded-lg transition">Valid Nested</button>
+                        <button onclick="setSample('function foo() { if (x[0] == (1)) { return true; }')" class="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 border border-slate-800 text-xs font-mono text-red-400 rounded-lg transition">Unmatched Open '{'</button>
+                        <button onclick="setSample('const arr = [1, 2, 3]);')" class="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 border border-slate-800 text-xs font-mono text-red-400 rounded-lg transition">Extra Close ')'</button>
+                    </div>
+                </div>
+            </div>
+
+        </section>
+
+        <!-- Right Col: Visual Stack -->
+        <section class="glass rounded-2xl p-6 shadow-xl flex flex-col">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-xs font-semibold text-slate-300 uppercase tracking-wider">
+                    <i class="fa-solid fa-layer-group mr-1.5 text-amber-400"></i> Bracket Stack (LIFO)
+                </h3>
+                <span id="stack-count" class="text-[10px] bg-amber-950/60 text-amber-400 px-2 py-0.5 rounded border border-amber-800/50 font-mono">0 elements</span>
+            </div>
+
+            <div id="stack-container" class="space-y-2 bg-slate-900/60 p-3 rounded-xl border border-slate-800 flex-grow min-h-[220px] max-h-[320px] overflow-y-auto flex flex-col-reverse">
+                <div class="text-center py-16 text-slate-500 text-xs italic">Stack is empty</div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Modal for Code Inspection -->
+    <div id="code-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm hidden items-center justify-center p-4 z-50">
+        <div class="glass max-w-2xl w-full rounded-2xl p-6 border border-slate-700 shadow-2xl">
+            <div class="flex items-center justify-between mb-4 border-b border-slate-800 pb-3">
+                <h3 class="text-lg font-bold text-white"><i class="fa-solid fa-code text-amber-400 mr-2"></i> Bracket Stack Implementation</h3>
+                <button onclick="toggleModal()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <pre class="bg-slate-950 p-4 rounded-xl text-xs font-mono text-amber-300 overflow-x-auto border border-slate-800 leading-relaxed">
+class BracketStack {
+    constructor() { this.items = []; }
+    push(char) { this.items.push(char); }
+    pop() { return this.items.pop(); }
+    peek() { return this.items[this.items.length - 1]; }
+    isEmpty() { return this.items.length === 0; }
+}</pre>
+            <div class="mt-4 flex justify-end">
+                <button onclick="toggleModal()" class="px-4 py-2 bg-amber-600 hover:bg-amber-500 text-xs font-semibold rounded-lg text-white transition">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript Logic -->
+    <script>
+        class BracketStack {
+            constructor() { this.items = []; }
+            push(item) { this.items.push(item); }
+            pop() { return this.items.pop(); }
+            peek() { return this.items[this.items.length - 1]; }
+            isEmpty() { return this.items.length === 0; }
+            getItems() { return [...this.items]; }
+        }
+
+        function setSample(str) {
+            document.getElementById('code-input').value = str;
+            validateExpression();
+        }
+
+        function validateExpression() {
+            const input = document.getElementById('code-input').value;
+            const stack = new BracketStack();
+            const pairs = { ')': '(', '}': '{', ']': '[' };
+            
+            let isValid = true;
+            let errorMsg = "";
+
+            for (let i = 0; i < input.length; i++) {
+                const char = input[i];
+                if (['(', '{', '['].includes(char)) {
+                    stack.push({ char, pos: i });
+                } else if ([')', '}', ']'].includes(char)) {
+                    if (stack.isEmpty()) {
+                        isValid = false;
+                        errorMsg = `Unmatched closing '${char}' at index ${i}`;
+                        break;
+                    }
+                    const top = stack.pop();
+                    if (top.char !== pairs[char]) {
+                        isValid = false;
+                        errorMsg = `Mismatched '${char}' at index ${i} (expected closing for '${top.char}')`;
+                        break;
+                    }
+                }
+            }
+
+            if (isValid && !stack.isEmpty()) {
+                isValid = false;
+                errorMsg = `Unclosed '${stack.peek().char}' remaining in stack`;
+            }
+
+            updateUI(input, stack, isValid, errorMsg);
+        }
+
+        function updateUI(input, stack, isValid, errorMsg) {
+            const card = document.getElementById('status-card');
+            const icon = document.getElementById('status-icon');
+            const title = document.getElementById('status-title');
+            const desc = document.getElementById('status-desc');
+            const badge = document.getElementById('status-badge');
+
+            if (input.trim() === "") {
+                card.className = "mt-4 p-4 rounded-xl border flex items-center justify-between bg-slate-900/50 border-slate-800";
+                icon.className = "w-10 h-10 rounded-lg bg-slate-800 flex items-center justify-center text-slate-400";
+                icon.innerHTML = `<i class="fa-solid fa-terminal"></i>`;
+                title.innerText = "Awaiting Input";
+                desc.innerText = "Type parentheses (), brackets [], or braces {} above.";
+                badge.className = "text-[10px] uppercase font-bold tracking-wider px-2.5 py-1 rounded-full bg-slate-800 text-slate-400";
+                badge.innerText = "Idle";
+            } else if (isValid) {
+                card.className = "mt-4 p-4 rounded-xl border flex items-center justify-between bg-emerald-950/30 border-emerald-800/60";
+                icon.className = "w-10 h-10 rounded-lg bg-emerald-900/50 flex items-center justify-center text-emerald-400";
+                icon.innerHTML = `<i class="fa-solid fa-circle-check text-lg"></i>`;
+                title.innerText = "Valid Syntax!";
+                desc.innerText = "All brackets are balanced and correctly matched.";
+                badge.className = "text-[10px] uppercase font-bold tracking-wider px-2.5 py-1 rounded-full bg-emerald-900/80 text-emerald-300 border border-emerald-700/50";
+                badge.innerText = "Passed";
+            } else {
+                card.className = "mt-4 p-4 rounded-xl border flex items-center justify-between bg-red-950/30 border-red-800/60";
+                icon.className = "w-10 h-10 rounded-lg bg-red-900/50 flex items-center justify-center text-red-400";
+                icon.innerHTML = `<i class="fa-solid fa-triangle-exclamation text-lg"></i>`;
+                title.innerText = "Syntax Error";
+                desc.innerText = errorMsg;
+                badge.className = "text-[10px] uppercase font-bold tracking-wider px-2.5 py-1 rounded-full bg-red-900/80 text-red-300 border border-red-700/50";
+                badge.innerText = "Failed";
+            }
+
+            // Stack Visualizer
+            const container = document.getElementById('stack-container');
+            const items = stack.getItems();
+            document.getElementById('stack-count').innerText = `${items.length} elements`;
+
+            if (items.length === 0) {
+                container.innerHTML = `<div class="text-center py-16 text-slate-500 text-xs italic">Stack is empty</div>`;
+            } else {
+                container.innerHTML = items.map((item, idx) => `
+                    <div class="flex items-center justify-between p-2.5 rounded-lg bg-slate-950/80 border border-amber-800/40 text-xs">
+                        <span class="font-mono font-bold text-amber-400 text-sm">'${item.char}'</span>
+                        <span class="text-[10px] text-slate-400 font-mono">${idx === items.length - 1 ? 'Top (LIFO)' : `index ${idx}`}</span>
+                    </div>
+                `).join('');
+            }
+        }
+
+        function toggleModal() {
+            const modal = document.getElementById('code-modal');
+            modal.classList.toggle('hidden');
+            modal.classList.toggle('flex');
+        }
+    </script>
+</body>
+</html>
